@@ -1,10 +1,10 @@
 package br.com.app.soccernews.ui.news;
 
+import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import br.com.app.soccernews.data.remote.SoccerNewsApi;
@@ -17,7 +17,12 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class NewsViewModel extends ViewModel {
 
+    public enum State {
+        DOING, DONE, ERROR;
+    }
+
     private final MutableLiveData<List<News>> news = new MutableLiveData<>();
+    private final MutableLiveData<State> state = new MutableLiveData<>();
     private final SoccerNewsApi api;
 
     public NewsViewModel() {
@@ -25,30 +30,37 @@ public class NewsViewModel extends ViewModel {
                 .baseUrl("https://jonathanmperes.github.io/soccer-news-api/")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
-
         api = retrofit.create(SoccerNewsApi.class);
+
         this.findNews();
     }
 
     private void findNews() {
+        state.setValue(State.DOING);
         api.getNews().enqueue(new Callback<List<News>>() {
             @Override
-            public void onResponse(Call<List<News>> call, Response<List<News>> response) {
+            public void onResponse(@NonNull Call<List<News>> call, @NonNull Response<List<News>> response) {
                 if (response.isSuccessful()) {
                     news.setValue(response.body());
+                    state.setValue(State.DONE);
                 } else {
-                    //TODO Pensar em uma estratégia de tratamento de erros
+                    state.setValue(State.ERROR);
                 }
             }
 
             @Override
-            public void onFailure(Call<List<News>> call, Throwable t) {
-                //TODO Pensar em uma estratégia de tratamento de erros
+            public void onFailure(@NonNull Call<List<News>> call, @NonNull Throwable t) {
+                t.printStackTrace();
+                state.setValue(State.ERROR);
             }
         });
     }
 
     public LiveData<List<News>> getNews() {
         return this.news;
+    }
+
+    public LiveData<State> getState() {
+        return this.state;
     }
 }
